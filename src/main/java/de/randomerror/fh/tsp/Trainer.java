@@ -55,17 +55,14 @@ public class Trainer {
     }
 
     public Path mutate(Path path) {
-        if(Math.random()<0.2){
+        if (Math.random() < 0.2) {
             return mutateSwap(path);
         }
         return mutateInvert(path);
     }
 
     public List<Path> recombine() {
-        List<Path> selectedParents = IntStream.range(0, REPRODUCTION)
-                .mapToObj(i -> r.nextInt(population.size()))
-                .map(parentIndex -> population.get(parentIndex))
-                .collect(Collectors.toList());
+        List<Path> selectedParents = parentSelectionRandom();
 
         return Graph.sliding(selectedParents, 2)
                 .map(parents -> {
@@ -73,12 +70,12 @@ public class Trainer {
                     List<Node> firstNodes = parents.get(0)
                             .solution.stream()
                             .limit(crossover)
-                    .collect(Collectors.toList());
+                            .collect(Collectors.toList());
 
                     parents.get(1).solution.stream()
                             .skip(crossover)
                             .forEach(node -> {
-                                while(firstNodes.contains(node)) {
+                                while (firstNodes.contains(node)) {
                                     int nodeIndex = parents.get(0).solution.indexOf(node);
                                     node = parents.get(1).solution.get(nodeIndex);
                                 }
@@ -95,18 +92,29 @@ public class Trainer {
                 .collect(Collectors.toCollection(LinkedList::new));
     }
 
+    private List<Path> parentSelectionRandom() {
+        return IntStream.range(0, REPRODUCTION)
+                .mapToObj(i -> r.nextInt(population.size()))
+                .map(parentIndex -> population.get(parentIndex))
+                .collect(Collectors.toList());
+    }
+
     public void train() {
         List<Path> children = recombine();
-        population = Stream.concat(population.stream(), children.stream())
-                .map(this::fitness)
-                .sorted(Comparator.comparing(Path::getLength))
-                .limit(PSIZE)
-                .collect(Collectors.toList());
+        population = childSelectionBest(children);
 
         Path best = population.get(0);
         graph.setDisplayPath(best);
         bestOfEachGeneration.add(best);
         generation++;
+    }
+
+    private List<Path> childSelectionBest(List<Path> children) {
+        return Stream.concat(population.stream(), children.stream())
+                .map(this::fitness)
+                .sorted(Comparator.comparing(Path::getLength))
+                .limit(PSIZE)
+                .collect(Collectors.toList());
     }
 
     public void initPopulation() {
