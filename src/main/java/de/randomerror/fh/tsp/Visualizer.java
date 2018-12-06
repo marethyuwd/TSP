@@ -4,16 +4,14 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.KeyListener;
 import java.awt.geom.AffineTransform;
-import java.util.*;
+import java.util.Comparator;
 import java.util.List;
-import java.util.function.Function;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 public class Visualizer extends JFrame {
     private Graph graph;
     private Trainer trainer;
-    private double maxY = 0;
+    public double maxY = 0;
 
     public Visualizer(Graph graph, Trainer trainer, KeyListener l) {
         super("TSP");

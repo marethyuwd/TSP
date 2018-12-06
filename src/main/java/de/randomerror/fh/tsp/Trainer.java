@@ -6,12 +6,13 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 public class Trainer {
-    private static Random r = new Random(1337);
+    private static Random r = new Random(4242);
     private Graph graph;
     private List<Path> population;
     private final int PSIZE = 100;
     private final int MUTATION = 1;
     private final int REPRODUCTION = 200;
+    private final int TURNEYSIZE = 7;
 
 
     private int generation = 0;
@@ -62,7 +63,7 @@ public class Trainer {
     }
 
     public List<Path> recombine() {
-        List<Path> selectedParents = parentSelectionRandom();
+        List<Path> selectedParents = parentSelectionTurnament();
 
         return Graph.sliding(selectedParents, 2)
                 .map(parents -> {
@@ -99,9 +100,21 @@ public class Trainer {
                 .collect(Collectors.toList());
     }
 
+    private List<Path> parentSelectionTurnament() {
+        List<Path> chickenDinner = new ArrayList<>();
+        for (int i = 0; i < REPRODUCTION; i++) {
+            Path winner = r.ints(TURNEYSIZE, 0, population.size())
+                    .mapToObj(value -> population.get(value))
+                    .min(Comparator.comparing(Path::getLength))
+                    .orElseThrow(() -> new RuntimeException("no path"));
+            chickenDinner.add(winner);
+        }
+        return chickenDinner;
+    }
+
     public void train() {
         List<Path> children = recombine();
-        population = childSelectionBest(children);
+        population = childSelectionRank(children);
 
         Path best = population.get(0);
         graph.setDisplayPath(best);
@@ -117,13 +130,42 @@ public class Trainer {
                 .collect(Collectors.toList());
     }
 
+    private List<Path> childSelectionRank(List<Path> children) {
+        List<Double> probabilities = new ArrayList<>();
+        List<Path> generation = Stream.concat(population.stream(), children.stream())
+                .map(this::fitness)
+                .sorted(Comparator.comparing(Path::getLength))
+                .collect(Collectors.toList());
+        for (int i = 0; i < children.size() - 1; i++) {
+            double prob = 2.0 / generation.size() * (1 - ((double) i / generation.size() - 1));
+            prob += i == 0 ? 0 : probabilities.get(i - 1);
+            probabilities.add(prob);
+        }
+        double dist = 1.0 / PSIZE;
+        double start = r.nextDouble() * dist;
+
+        List<Path> winners = new ArrayList<>();
+        for (int j = 0; j < PSIZE; j++) {
+            for (int k = 0; k < probabilities.size() - 1; k++) {
+                if (start < probabilities.get(k)) {
+                    winners.add(generation.get(k));
+                    break;
+                }
+            }
+            start += dist;
+        }
+        return winners;
+    }
+
     public void initPopulation() {
         population = new LinkedList<>();
+        bestOfEachGeneration = new LinkedList<>();
         for (int i = 0; i < PSIZE; i++) {
             LinkedList<Node> nodeList = new LinkedList<>(graph.getNodes());
             Collections.shuffle(nodeList, r);
             Path p = new Path();
             p.solution = nodeList;
+            fitness(p);
             population.add(p);
         }
     }
