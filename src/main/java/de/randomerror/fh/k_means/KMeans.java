@@ -1,29 +1,35 @@
 package de.randomerror.fh.k_means;
 
-import de.randomerror.fh.zoo.Neuron;
-
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static java.util.stream.Collectors.groupingBy;
 
 public class KMeans {
-    static final int K = 2;
+    static final int K = 50;
 
     public static void run(ArrayList<Entry> inputValues) throws IOException {
         List<Entry> cluster = new LinkedList<>();
-        Random r = new Random(1337);
+        Random r = new Random(1357);
 
-        for (int i = 0; i < K; i++) {
-            Entry e = inputValues.get(r.nextInt(inputValues.size()));
-            Entry clusterShoppingCenter = new Entry(e);
-            clusterShoppingCenter.clazz = i;
-            cluster.add(clusterShoppingCenter);
-        }
-        outer:
-        while(true) {
+        IntStream.generate(() -> r.nextInt(inputValues.size()))
+                .distinct()
+                .limit(K)
+                .forEach(rand -> {
+                    Entry e = inputValues.get(r.nextInt(inputValues.size()));
+                    Entry clusterShoppingCenter = new Entry(e);
+                    clusterShoppingCenter.clazz = cluster.size();
+                    cluster.add(clusterShoppingCenter);
+                });
+
+        while (true) {
+            List<double[]> clustertruck = cluster.stream()
+                    .map(entry -> entry.data)
+                    .collect(Collectors.toList());
+
             for (Map.Entry<Integer, List<Entry>> entry : inputValues.stream().peek(i -> {
                 i.clazz = classify(cluster, i.data);
             }).collect(groupingBy(i -> i.clazz)).entrySet()) {
@@ -40,10 +46,13 @@ public class KMeans {
                 for (int i = 0; i < data.length; i++) {
                     data[i] = data[i] / (double) value.size();
                 }
-                if (Arrays.equals(shoppingCenter.data, data))
-                    break outer;
                 shoppingCenter.data = data;
             }
+            if (IntStream.range(0, cluster.size())
+                    .allMatch(value -> Arrays.equals(cluster.get(value).data, clustertruck.get(value)))) {
+                break;
+            }
+
         }
 
         write(inputValues);
@@ -91,6 +100,6 @@ public class KMeans {
         for (int i = 0; i < input1.length; i++) {
             sum += Math.pow(input1[i] - input2[i], exponent);
         }
-        return Math.pow(sum, 1/(double)exponent);
+        return Math.pow(sum, 1 / (double) exponent);
     }
 }
