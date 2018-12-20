@@ -40,12 +40,12 @@ public class NearestNeighbor {
         return learningMaterial.stream()
                 .peek(e -> e.dist = distance(input, e.data))
                 .sorted(Comparator.comparingDouble(Entry::getDist))
-            .limit(K)
-            .collect(Collectors.groupingBy(Entry::getDataClass))
-            .values().stream()
+                .limit(K)
+                .collect(Collectors.groupingBy(Entry::getDataClass))
+                .values().stream()
                 .max(Comparator.comparing(List::size))
                 .map(l -> l.get(0).dataClass)
-        .get();
+                .get();
     }
 
     public static double distance(double[] i1, double[] i2) {
